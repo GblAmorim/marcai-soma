@@ -14,6 +14,12 @@ pnpm dev
 bun dev
 ```
 
+Carregando e criando tabelas com dados da seed:
+npx drizzle-kit push
+
+Abrir o studio do drizzle:
+npx drizzle-kit studio
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
