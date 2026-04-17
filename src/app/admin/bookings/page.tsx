@@ -1,0 +1,151 @@
+"use client";
+
+import { SearchIcon } from "lucide-react";
+import { redirect } from "next/navigation";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { BookingCard } from "@/components/bookings/booking-card";
+import { BookingDetail } from "@/components/bookings/booking-detail";
+import { Header } from "@/components/common/header";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { authClient } from "@/lib/auth-client";
+import {
+  type Booking,
+  type BookingStatus,
+  MOCK_BOOKINGS,
+} from "@/lib/bookings";
+
+const ALL = "all" as const;
+type FilterStatus = BookingStatus | typeof ALL;
+
+const AdminBookingsPage = () => {
+  const { data: session, isPending } = authClient.useSession();
+
+  const [localBookings, setLocalBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>(ALL);
+  const [selected, setSelected] = useState<Booking | null>(null);
+
+  const user = session?.user as
+    | (NonNullable<typeof session>["user"] & { role?: string })
+    | undefined;
+
+  if (!isPending && user?.role !== "admin") {
+    redirect("/");
+  }
+
+  const bookings = useMemo(() => {
+    let list = localBookings;
+    if (statusFilter !== ALL)
+      list = list.filter((b) => b.status === statusFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (b) =>
+          b.room.name.toLowerCase().includes(q) ||
+          b.user.apartment.apartmentNumber.includes(q) ||
+          `${b.user.firstName} ${b.user.lastName}`.toLowerCase().includes(q),
+      );
+    }
+    return [...list].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [localBookings, statusFilter, search]);
+
+  const handleSave = (id: string, startDate: string, endDate: string) => {
+    setLocalBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, startDate, endDate } : b)),
+    );
+    toast.success("Reserva atualizada!");
+  };
+
+  const handleCancel = (id: string) => {
+    setLocalBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)),
+    );
+    toast.success("Reserva cancelada.");
+  };
+
+  const selectedBooking = selected
+    ? (localBookings.find((b) => b.id === selected.id) ?? null)
+    : null;
+
+  return (
+    <>
+      <Header />
+
+      <div className="flex flex-col gap-5 px-5 pb-10">
+        <div className="pt-1">
+          <h1 className="text-lg font-bold">Histórico de reservas</h1>
+          <p className="text-muted-foreground text-sm">
+            Todas as reservas do condomínio
+          </p>
+        </div>
+
+        <div className="relative">
+          <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="Buscar por sala, apto ou nome..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <Tabs
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as FilterStatus)}
+        >
+          <TabsList className="w-full">
+            <TabsTrigger value="all" className="flex-1">
+              Todas
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1">
+              Pendentes
+            </TabsTrigger>
+            <TabsTrigger value="active" className="flex-1">
+              Confirmadas
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="flex-1">
+              Concluídas
+            </TabsTrigger>
+            <TabsTrigger value="cancelled" className="flex-1">
+              Canceladas
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {bookings.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {bookings.map((booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                onClick={() => setSelected(booking)}
+                showUser
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground py-10 text-center text-sm">
+            Nenhuma reserva encontrada.
+          </p>
+        )}
+      </div>
+
+      <BookingDetail
+        booking={selectedBooking}
+        canModify={selectedBooking?.status === "active"}
+        showUser
+        onClose={() => setSelected(null)}
+        onSave={handleSave}
+        onCancel={handleCancel}
+      />
+    </>
+  );
+};
+
+export default AdminBookingsPage;
