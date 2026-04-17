@@ -26,9 +26,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 
+const phoneRegex = /^\(?\d{2}\)?[\s-]?9\d{4}[\s-]?\d{4}$/;
+
+function isPhoneNumber(value: string): boolean {
+  return phoneRegex.test(value.replace(/\s/g, ""));
+}
+
 const formSchema = z.object({
-  email: z.email("E-mail inválido!"),
-  password: z.string("Senha inválida!").min(8, "Senha inválida!"),
+  identifier: z
+    .string()
+    .trim()
+    .min(1, "E-mail ou celular é obrigatório.")
+    .refine(
+      (val) => z.email().safeParse(val).success || phoneRegex.test(val),
+      "Digite um e-mail ou celular válido.",
+    ),
+  password: z.string().min(8, "Senha inválida."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -38,42 +51,54 @@ const SignInForm = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
   });
 
   async function onSubmit(values: FormValues) {
-    await authClient.signIn.email({
-      email: values.email,
-      password: values.password,
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/");
+    const handleSignInError = (code?: string, message?: string) => {
+      if (
+        code === "USER_NOT_FOUND" ||
+        code === "INVALID_EMAIL_OR_PASSWORD" ||
+        code === "INVALID_PHONE_NUMBER_OR_PASSWORD"
+      ) {
+        toast.error("E-mail, celular ou senha inválidos.");
+        form.setError("identifier", {
+          message: "E-mail, celular ou senha inválidos.",
+        });
+        form.setError("password", {
+          message: "E-mail, celular ou senha inválidos.",
+        });
+        return;
+      }
+      toast.error(message ?? "Erro ao fazer login.");
+    };
+
+    if (isPhoneNumber(values.identifier)) {
+      const { error } = await authClient.$fetch("/sign-in/phone-number", {
+        method: "POST",
+        body: {
+          phoneNumber: values.identifier.replace(/\D/g, ""),
+          password: values.password,
         },
-        onError: (ctx) => {
-          if (ctx.error.code === "USER_NOT_FOUND") {
-            toast.error("Usuário não encontrado.");
-            form.setError("email", {
-              message: "E-mail ou senha inválidos.",
-            });
-            return form.setError("password", {
-              message: "E-mail ou senha inválidos.",
-            });
-          }
-          if (ctx.error.code === "INVALID_EMAIL_OR_PASSWORD") {
-            toast.error("E-mail ou senha inválidos.");
-            form.setError("email", {
-              message: "E-mail ou senha inválidos.",
-            });
-            return form.setError("password", {
-              message: "E-mail ou senha inválidos.",
-            });
-          }
-          toast.error(ctx.error.message);
+      });
+      if (error) {
+        handleSignInError(undefined, error.message);
+        return;
+      }
+      router.push("/");
+    } else {
+      await authClient.signIn.email({
+        email: values.identifier,
+        password: values.password,
+        fetchOptions: {
+          onSuccess: () => router.push("/"),
+          onError: (ctx) =>
+            handleSignInError(ctx.error.code, ctx.error.message),
         },
-      },
-    });
+      });
+    }
   }
 
   const handleSignInWithGoogle = async () => {
@@ -100,12 +125,15 @@ const SignInForm = () => {
             <CardContent className="grid gap-6">
               <FormField
                 control={form.control}
-                name="email"
+                name="identifier"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>E-mail ou celular</FormLabel>
                     <FormControl>
-                      <Input placeholder="Digite o seu email" {...field} />
+                      <Input
+                        placeholder="Digite o seu e-mail ou celular"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
