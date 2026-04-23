@@ -1,20 +1,16 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -24,28 +20,37 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  SearchableSelect,
+  type SelectOption,
+} from "@/components/ui/searchable-select";
 import { authClient } from "@/lib/auth-client";
-import { maskCpf, maskPhone, maskRg, normalizeDoc } from "@/lib/masks";
-import { MOCK_APARTMENTS } from "@/lib/residents";
-import { clearString } from "@/lib/utils";
+import { maskCpf, maskPhone, maskRg } from "@/lib/masks";
+import { clearString, cn } from "@/lib/utils";
 
-function isRegisteredResident(
-  firstName: string,
-  lastName: string,
-  cpf: string,
-  rg: string,
-  apartment: string,
-): boolean {
-  const apt = MOCK_APARTMENTS.find((a) => a.id.trim() === apartment.trim());
-  if (!apt) return false;
-  return apt.residents.some(
-    (r) =>
-      r.name.trim().toLowerCase() === firstName.trim().toLowerCase() &&
-      r.lastName.trim().toLowerCase() === lastName.trim().toLowerCase() &&
-      normalizeDoc(r.cpf) === normalizeDoc(cpf) &&
-      normalizeDoc(r.rg) === normalizeDoc(rg),
+const ClearableInput = ({
+  onClear,
+  className,
+  ...props
+}: React.ComponentProps<typeof Input> & { onClear: () => void }) => {
+  const hasValue = !!props.value;
+  return (
+    <div className="relative">
+      <Input {...props} className={cn(className, hasValue && "pr-8")} />
+      {hasValue && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={onClear}
+          aria-label="Limpar campo"
+          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 transition-colors"
+        >
+          <XIcon className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
   );
-}
+};
 
 function calculateAge(birthDateStr: string): number {
   const birth = new Date(birthDateStr);
@@ -106,6 +111,9 @@ const formSchema = z
     condominiumId: z.string().trim().min(2, "Condomínio é obrigatório."),
     apartmentId: z.string().trim().min(2, "Apartamento é obrigatório."),
     role: z.string().trim().min(2, "Função é obrigatória."),
+    termsAccepted: z.boolean().refine((v) => v === true, {
+      message: "Você deve aceitar os Termos de Uso e a LGPD.",
+    }),
   })
   .refine((data) => data.password === data.passwordConfirmation, {
     error: "As senhas não coincidem.",
@@ -128,6 +136,16 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 const SignUpForm = () => {
+  const [condominiumOptions, setCondominiumOptions] = useState<SelectOption[]>(
+    [],
+  );
+  const [apartmentOptions, setApartmentOptions] = useState<SelectOption[]>([]);
+  const [responsibleOptions, setResponsibleOptions] = useState<SelectOption[]>(
+    [],
+  );
+  const [loadingApartments, setLoadingApartments] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -138,14 +156,103 @@ const SignUpForm = () => {
       phoneNumber: "",
       email: "",
       birthDate: "",
-      responsibleId: "cd8f9d1d-0bb7-45d0-b3c5-d293f54fecdb",
+      responsibleId: "",
       password: "",
       passwordConfirmation: "",
-      apartmentId: "bb48ce7c-94ad-4637-8d08-266f6b94e866",
-      condominiumId: "2a6b5660-4d64-466c-80f4-721a7a9fe456",
+      apartmentId: "",
+      condominiumId: "",
       role: "resident",
+      termsAccepted: false,
     },
   });
+
+  const condominiumId = useWatch({
+    control: form.control,
+    name: "condominiumId",
+  });
+  const apartmentId = useWatch({ control: form.control, name: "apartmentId" });
+
+  // Load condominiums on mount
+  useEffect(() => {
+    fetch("/api/condominiums")
+      .then((r) => r.json())
+      .then((data: { id: string; name: string }[]) =>
+        setCondominiumOptions(
+          data.map((c) => ({ value: c.id, label: c.name })),
+        ),
+      )
+      .catch(() => toast.error("Erro ao carregar condomínios."));
+  }, []);
+
+  // Load apartments whenever condominiumId changes
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!condominiumId) {
+        setApartmentOptions([]);
+        form.setValue("apartmentId", "");
+        return;
+      }
+      form.setValue("apartmentId", "");
+      setLoadingApartments(true);
+      setApartmentOptions([]);
+      try {
+        const r = await fetch(`/api/apartments?condominiumId=${condominiumId}`);
+        const data: {
+          id: string;
+          tower: string;
+          apartmentNumber: string;
+          apartmentBlock: string;
+        }[] = await r.json();
+        if (!cancelled) {
+          setApartmentOptions(
+            data.map((a) => ({
+              value: a.id,
+              label: `Torre ${a.tower} \u00b7 Bloco ${a.apartmentBlock} \u00b7 Apto ${a.apartmentNumber}`,
+            })),
+          );
+        }
+      } catch {
+        toast.error("Erro ao carregar apartamentos.");
+      } finally {
+        if (!cancelled) setLoadingApartments(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [condominiumId, form]);
+
+  // Load adult residents whenever apartmentId changes (for responsible selector)
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!apartmentId) {
+        setResponsibleOptions([]);
+        form.setValue("responsibleId", "");
+        return;
+      }
+      form.setValue("responsibleId", "");
+      try {
+        const r = await fetch(`/api/apartments/${apartmentId}/residents`);
+        const data: { id: string; firstName: string; lastName: string }[] =
+          await r.json();
+        if (!cancelled) {
+          setResponsibleOptions(
+            data.map((u) => ({
+              value: u.id,
+              label: `${u.firstName} ${u.lastName}`,
+            })),
+          );
+        }
+      } catch {
+        toast.error("Erro ao carregar moradores.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apartmentId, form]);
 
   const birthDateValue = useWatch({ control: form.control, name: "birthDate" });
   const isMinor =
@@ -155,6 +262,7 @@ const SignUpForm = () => {
 
   const router = useRouter();
   async function onSubmit(values: FormValues) {
+    setIsSubmitting(true);
     try {
       // if (
       //   !isRegisteredResident(
@@ -205,20 +313,38 @@ const SignUpForm = () => {
       console.log("err: ", error);
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Crie uma conta para continuar.</CardDescription>
-        </CardHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
             <CardContent className="grid grid-cols-2 gap-4">
+              {/* Condomínio — full width */}
+              <FormField
+                control={form.control}
+                name="condominiumId"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Condomínio</FormLabel>
+                    <FormControl>
+                      <SearchableSelect
+                        options={condominiumOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Selecione o condomínio"
+                        searchPlaceholder="Pesquisar condomínio..."
+                        emptyMessage="Nenhum condomínio encontrado."
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="firstName"
@@ -226,7 +352,11 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Nome</FormLabel>
                     <FormControl>
-                      <Input placeholder="Digite o seu nome" {...field} />
+                      <ClearableInput
+                        placeholder="Digite o seu nome"
+                        {...field}
+                        onClear={() => field.onChange("")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -239,7 +369,11 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Sobrenome</FormLabel>
                     <FormControl>
-                      <Input placeholder="Digite o seu sobrenome" {...field} />
+                      <ClearableInput
+                        placeholder="Digite o seu sobrenome"
+                        {...field}
+                        onClear={() => field.onChange("")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -252,12 +386,13 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>CPF</FormLabel>
                     <FormControl>
-                      <Input
+                      <ClearableInput
                         placeholder="000.000.000-00"
                         {...field}
                         onChange={(e) =>
                           field.onChange(maskCpf(e.target.value))
                         }
+                        onClear={() => field.onChange("")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -271,10 +406,11 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>RG</FormLabel>
                     <FormControl>
-                      <Input
+                      <ClearableInput
                         placeholder="00.000.000-0"
                         {...field}
                         onChange={(e) => field.onChange(maskRg(e.target.value))}
+                        onClear={() => field.onChange("")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -288,12 +424,13 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Celular</FormLabel>
                     <FormControl>
-                      <Input
+                      <ClearableInput
                         placeholder="(00) 90000-0000"
                         {...field}
                         onChange={(e) =>
                           field.onChange(maskPhone(e.target.value))
                         }
+                        onClear={() => field.onChange("")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -302,14 +439,23 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
-                name="apartment"
+                name="apartmentId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="min-w-0 overflow-hidden">
                     <FormLabel>Apartamento</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Digite o seu apartamento"
-                        {...field}
+                      <SearchableSelect
+                        options={apartmentOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={
+                          condominiumId
+                            ? "Selecione o apartamento"
+                            : "Selecione o condomínio primeiro"
+                        }
+                        searchPlaceholder="Pesquisar apartamento..."
+                        emptyMessage="Nenhum apartamento encontrado."
+                        disabled={!condominiumId || loadingApartments}
                       />
                     </FormControl>
                     <FormMessage />
@@ -323,7 +469,12 @@ const SignUpForm = () => {
                   <FormItem className="col-span-2">
                     <FormLabel>E-mail</FormLabel>
                     <FormControl>
-                      <Input placeholder="Digite o seu e-mail" {...field} />
+                      <ClearableInput
+                        placeholder="Digite o seu e-mail"
+                        type="email"
+                        {...field}
+                        onClear={() => field.onChange("")}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,12 +498,25 @@ const SignUpForm = () => {
                   control={form.control}
                   name="responsibleId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="min-w-0">
                       <FormLabel>Responsável</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Nome completo do responsável"
-                          {...field}
+                        <SearchableSelect
+                          options={responsibleOptions}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          placeholder={
+                            apartmentId
+                              ? responsibleOptions.length === 0
+                                ? "Nenhum adulto neste apto"
+                                : "Selecione o responsável"
+                              : "Selecione o apartamento primeiro"
+                          }
+                          searchPlaceholder="Pesquisar responsável..."
+                          emptyMessage="Nenhum morador adulto encontrado."
+                          disabled={
+                            !apartmentId || responsibleOptions.length === 0
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -367,10 +531,11 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <Input
+                      <ClearableInput
                         placeholder="Digite sua senha"
                         type="password"
                         {...field}
+                        onClear={() => field.onChange("")}
                       />
                     </FormControl>
                     <FormMessage />
@@ -384,19 +549,63 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Confirmar senha</FormLabel>
                     <FormControl>
-                      <Input
+                      <ClearableInput
                         placeholder="Digite sua senha novamente"
                         type="password"
                         {...field}
+                        onClear={() => field.onChange("")}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="termsAccepted"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <div className="flex items-start gap-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          id="termsAccepted"
+                        />
+                      </FormControl>
+                      <FormLabel
+                        htmlFor="termsAccepted"
+                        className="cursor-pointer text-sm font-normal"
+                      >
+                        Lí e aceito os{" "}
+                        <a
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          Termos de Uso
+                        </a>{" "}
+                        e a{" "}
+                        <a
+                          href="/lgpd"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          LGPD
+                        </a>
+                      </FormLabel>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
             <CardFooter>
-              <Button type="submit">Criar conta</Button>
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? "Criando conta..." : "Criar conta"}
+              </Button>
             </CardFooter>
           </form>
         </Form>
