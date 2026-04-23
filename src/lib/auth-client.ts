@@ -1,6 +1,13 @@
-import { phoneNumberClient } from "better-auth/client/plugins";
+import {
+  inferAdditionalFields,
+  phoneNumberClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+import type { auth } from "@/lib/auth";
+
 export const authClient = createAuthClient({
-  plugins: [phoneNumberClient()],
+  plugins: [phoneNumberClient(), inferAdditionalFields<typeof auth>()],
 });
+
+export type Session = typeof authClient.$Infer.Session;

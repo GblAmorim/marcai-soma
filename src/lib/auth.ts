@@ -41,6 +41,46 @@ export const auth = betterAuth({
         required: true,
         input: true,
       },
+      condominiumId: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+      apartmentId: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+      cpf: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+      rg: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+      birthDate: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+      responsibleId: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      phoneNumber: {
+        type: "string",
+        required: true,
+        input: true,
+      },
+      role: {
+        type: "string",
+        required: true,
+        input: true,
+      },
     },
   },
   session: {

@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { maskCpf, maskPhone, maskRg, normalizeDoc } from "@/lib/masks";
 import { MOCK_APARTMENTS } from "@/lib/residents";
+import { clearString } from "@/lib/utils";
 
 function isRegisteredResident(
   firstName: string,
@@ -35,9 +36,7 @@ function isRegisteredResident(
   rg: string,
   apartment: string,
 ): boolean {
-  const apt = MOCK_APARTMENTS.find(
-    (a) => a.id.trim() === apartment.trim(),
-  );
+  const apt = MOCK_APARTMENTS.find((a) => a.id.trim() === apartment.trim());
   if (!apt) return false;
   return apt.residents.some(
     (r) =>
@@ -85,8 +84,7 @@ const formSchema = z
         /^\d{2}\.\d{3}\.\d{3}-[\dXx]$/,
         "RG inválido. Use o formato 00.000.000-0.",
       ),
-    apartment: z.string().trim().min(1, "Apartamento é obrigatório."),
-    phone: z
+    phoneNumber: z
       .string()
       .trim()
       .regex(
@@ -102,9 +100,12 @@ const formSchema = z
         (val) => calculateAge(val) >= 0,
         "Data de nascimento não pode ser no futuro.",
       ),
-    guardian: z.string().trim().optional(),
+    responsibleId: z.string().trim().optional(),
     password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres."),
     passwordConfirmation: z.string().min(8, "Senha inválida."),
+    condominiumId: z.string().trim().min(2, "Condomínio é obrigatório."),
+    apartmentId: z.string().trim().min(2, "Apartamento é obrigatório."),
+    role: z.string().trim().min(2, "Função é obrigatória."),
   })
   .refine((data) => data.password === data.passwordConfirmation, {
     error: "As senhas não coincidem.",
@@ -115,19 +116,18 @@ const formSchema = z
       if (!data.birthDate || isNaN(new Date(data.birthDate).getTime()))
         return true;
       const isMinor = calculateAge(data.birthDate) < 18;
-      if (isMinor && !data.guardian?.trim()) return false;
+      if (isMinor && !data.responsibleId?.trim()) return false;
       return true;
     },
     {
       error: "Responsável é obrigatório para menores de idade.",
-      path: ["guardian"],
+      path: ["responsibleId"],
     },
   );
 
 type FormValues = z.infer<typeof formSchema>;
 
 const SignUpForm = () => {
-  const router = useRouter();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -135,13 +135,15 @@ const SignUpForm = () => {
       lastName: "",
       cpf: "",
       rg: "",
-      apartment: "",
-      phone: "",
+      phoneNumber: "",
       email: "",
       birthDate: "",
-      guardian: "",
+      responsibleId: "cd8f9d1d-0bb7-45d0-b3c5-d293f54fecdb",
       password: "",
       passwordConfirmation: "",
+      apartmentId: "bb48ce7c-94ad-4637-8d08-266f6b94e866",
+      condominiumId: "2a6b5660-4d64-466c-80f4-721a7a9fe456",
+      role: "resident",
     },
   });
 
@@ -151,42 +153,59 @@ const SignUpForm = () => {
     !isNaN(new Date(birthDateValue).getTime()) &&
     calculateAge(birthDateValue) < 18;
 
+  const router = useRouter();
   async function onSubmit(values: FormValues) {
-    if (
-      !isRegisteredResident(
-        values.firstName,
-        values.lastName,
-        values.cpf,
-        values.rg,
-        values.apartment,
-      )
-    ) {
-      toast.error(
-        "Cadastro não permitido. Nome, sobrenome, CPF, RG e apartamento não correspondem a nenhum condômino cadastrado.",
-      );
-      return;
-    }
+    try {
+      // if (
+      //   !isRegisteredResident(
+      //     values.firstName,
+      //     values.lastName,
+      //     values.cpf,
+      //     values.rg,
+      //     values.apartment,
+      //   )
+      // ) {
+      //   toast.error(
+      //     "Cadastro não permitido. Nome, sobrenome, CPF, RG e apartamento não correspondem a nenhum condômino cadastrado.",
+      //   );
+      //   return;
+      // }
+      console.log("values: ", values);
 
-    await authClient.signUp.email({
-      name: `${values.firstName} ${values.lastName}`,
-      email: values.email,
-      password: values.password,
-      fetchOptions: {
-        onSuccess: () => {
-          toast.success("Conta criada com sucesso!");
-          router.push("/identity-verification");
+      const { data, error } = await authClient.signUp.email({
+        name: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        email: values.email,
+        password: values.password,
+        phoneNumber: clearString(values.phoneNumber),
+        condominiumId: values.condominiumId,
+        apartmentId: values.apartmentId,
+        birthDate: values.birthDate,
+        cpf: clearString(values.cpf),
+        rg: clearString(values.rg),
+        responsibleId: values.responsibleId,
+        role: values.role,
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success("Conta criada com sucesso!");
+            router.push("/identity-verification");
+          },
+          onError: (ctx) => {
+            if (ctx.error.code === "USER_ALREADY_EXISTS") {
+              toast.error("Erro ao cadastrar.");
+              return form.setError("email", {
+                message: "E-mail já cadastrado.",
+              });
+            }
+            toast.error(ctx.error.message);
+          },
         },
-        onError: (ctx) => {
-          if (ctx.error.code === "USER_ALREADY_EXISTS") {
-            toast.error("Erro ao cadastrar.");
-            return form.setError("email", {
-              message: "E-mail já cadastrado.",
-            });
-          }
-          toast.error(ctx.error.message);
-        },
-      },
-    });
+      });
+      console.log("data: ", data);
+      console.log("err: ", error);
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (
@@ -264,7 +283,7 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
-                name="phone"
+                name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Celular</FormLabel>
@@ -326,7 +345,7 @@ const SignUpForm = () => {
               {isMinor && (
                 <FormField
                   control={form.control}
-                  name="guardian"
+                  name="responsibleId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Responsável</FormLabel>

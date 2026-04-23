@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 
 const ACCEPTED_DOCUMENTS = [
   "RG (frente e verso em uma imagem)",
-  "CNH (frente)",
+  'CNH (frente e verso em uma imagem ou PDF do app "CNH do Brasil")',
   "Passaporte (página com foto)",
 ];
 
