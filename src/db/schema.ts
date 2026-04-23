@@ -1,9 +1,10 @@
-import { min, relations, sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   AnyPgColumn,
   boolean,
   check,
   date,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -16,6 +17,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+// ── Condominium tables ──────────────────────────────────────────────────────
 export const condominiumTable = pgTable("condominium", {
   id: uuid().primaryKey().defaultRandom(),
   name: text().notNull().unique(),
@@ -32,49 +34,8 @@ export const condominiumRelations = relations(condominiumTable, ({ many }) => ({
   bookings: many(bookingTable),
 }));
 
-export const rolesEnum = pgEnum("role", ["admin", "resident"]);
 export const towersEnum = pgEnum("tower", ["1", "2"]);
 export const apartmentBlockEnum = pgEnum("apartment_block", ["A", "B", "C"]);
-export const userTable = pgTable("user", {
-  id: uuid().primaryKey().defaultRandom(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  cpf: varchar("cpf", { length: 11 }).notNull().unique(),
-  rg: varchar("rg", { length: 20 }).notNull().unique(),
-  condominiumId: uuid("condominium_id")
-    .notNull()
-    .references(() => condominiumTable.id),
-  apartmentId: uuid("apartment_id")
-    .notNull()
-    .references(() => apartmentTable.id),
-  phone: text().notNull().unique(),
-  birthDate: date("birth_date").notNull(),
-  email: text().notNull().unique(),
-  responsibleId: uuid("responsible_id").references(
-    (): AnyPgColumn => userTable.id,
-  ),
-  role: rolesEnum().notNull(),
-  imageUrl: text("image_url"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
-});
-
-export const userRelations = relations(userTable, ({ one, many }) => ({
-  booking: many(bookingTable),
-  condominium: one(condominiumTable, {
-    fields: [userTable.condominiumId],
-    references: [condominiumTable.id],
-  }),
-  responsible: one(userTable, {
-    fields: [userTable.responsibleId],
-    references: [userTable.id],
-  }),
-  apartment: one(apartmentTable, {
-    fields: [userTable.apartmentId],
-    references: [apartmentTable.id],
-  }),
-}));
-
 export const apartmentTable = pgTable(
   "apartment",
   {
@@ -109,6 +70,134 @@ export const apartmentRelations = relations(
   }),
 );
 
+// ── User tables ──────────────────────────────────────────────────────
+export const rolesEnum = pgEnum("role", ["admin", "resident"]);
+export const userTable = pgTable("user", {
+  id: uuid().primaryKey().defaultRandom(),
+  condominiumId: uuid("condominium_id")
+    .notNull()
+    .references(() => condominiumTable.id),
+  apartmentId: uuid("apartment_id")
+    .notNull()
+    .references(() => apartmentTable.id),
+  responsibleId: uuid("responsible_id").references(
+    (): AnyPgColumn => userTable.id,
+  ),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  cpf: varchar("cpf", { length: 11 }).notNull().unique(),
+  rg: varchar("rg", { length: 20 }).notNull().unique(),
+  birthDate: date("birth_date").notNull(),
+  email: text().notNull().unique(),
+  phoneNumber: text("phone_number").unique(),
+  role: rolesEnum().notNull(),
+  imageUrl: text("image_url"),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  phoneNumberVerified: boolean("phone_number_verified"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+export const userRelations = relations(userTable, ({ one, many }) => ({
+  booking: many(bookingTable),
+  condominium: one(condominiumTable, {
+    fields: [userTable.condominiumId],
+    references: [condominiumTable.id],
+  }),
+  responsible: one(userTable, {
+    fields: [userTable.responsibleId],
+    references: [userTable.id],
+  }),
+  apartment: one(apartmentTable, {
+    fields: [userTable.apartmentId],
+    references: [apartmentTable.id],
+  }),
+}));
+
+// ── Better-Auth tables ──────────────────────────────────────────────────────
+export const sessionTable = pgTable(
+  "session_table",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text().notNull().unique(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [index("sessionTable_userId_idx").on(table.userId)],
+);
+
+export const accountTable = pgTable(
+  "account_table",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => userTable.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text(),
+    password: text(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("accountTable_userId_idx").on(table.userId)],
+);
+
+export const verificationTable = pgTable(
+  "verification_table",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("verificationTable_identifier_idx").on(table.identifier)],
+);
+
+export const userTableRelations = relations(userTable, ({ many }) => ({
+  sessionTables: many(sessionTable),
+  accountTables: many(accountTable),
+}));
+
+export const sessionTableRelations = relations(sessionTable, ({ one }) => ({
+  userTable: one(userTable, {
+    fields: [sessionTable.userId],
+    references: [userTable.id],
+  }),
+}));
+
+export const accountTableRelations = relations(accountTable, ({ one }) => ({
+  userTable: one(userTable, {
+    fields: [accountTable.userId],
+    references: [userTable.id],
+  }),
+}));
+
+// ── Room tables ──────────────────────────────────────────────────────
 export const floorEnum = pgEnum("floor", ["1", "2", "3", "4", "5", "28"]);
 export const roomTable = pgTable(
   "room",
@@ -119,7 +208,7 @@ export const roomTable = pgTable(
       .references(() => condominiumTable.id),
     categoryId: uuid("category_id")
       .notNull()
-      .references(() => categoryTable.id),
+      .references(() => categoryTable.id, { onDelete: "set null" }),
     slug: text().notNull().unique(),
     name: text().notNull(),
     description: text().notNull(),
@@ -214,6 +303,7 @@ export const categoryRelations = relations(categoryTable, ({ many }) => ({
   products: many(roomTable),
 }));
 
+// ── Booking tables ──────────────────────────────────────────────────────
 export const bookingStatusEnum = pgEnum("booking_status", [
   "pending",
   "active",
