@@ -18,11 +18,6 @@ const IdentityVerification = () => {
             <h1 className="text-2xl font-bold tracking-tight">
               Verificação de identidade
             </h1>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Para garantir a segurança de todos os moradores, precisamos
-              confirmar sua identidade antes de liberar o acesso ao sistema de
-              reservas.
-            </p>
           </div>
 
           <div className="flex w-full items-center gap-2">
