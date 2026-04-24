@@ -1,4 +1,5 @@
 import {
+  ArrowLeftIcon,
   BanknoteIcon,
   CalendarDaysIcon,
   CheckIcon,
@@ -9,6 +10,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Header } from "@/components/common/header";
@@ -21,6 +23,7 @@ import {
 import { getRoomBySlug } from "@/db/queries";
 
 import RoomBookingCalendar from "./components/room-booking-calendar";
+import SwipeBack from "./components/swipe-back";
 
 interface RoomPageProps {
   params: Promise<{ slug: string }>;
@@ -35,6 +38,7 @@ const RoomPage = async ({ params }: RoomPageProps) => {
   return (
     <>
       <Header />
+      <SwipeBack />
 
       <div className="flex flex-col gap-6 pb-10">
         <div className="relative h-56 w-full overflow-hidden sm:h-72">
@@ -46,6 +50,14 @@ const RoomPage = async ({ params }: RoomPageProps) => {
             sizes="100vw"
           />
           <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+          {/* Back button */}
+          <Link
+            href="/"
+            className="absolute top-4 left-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+            aria-label="Voltar para listagem de salas"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </Link>
           <div className="absolute bottom-0 left-0 p-5">
             <h1 className="text-2xl font-bold text-white">{room.name}</h1>
           </div>
@@ -62,11 +74,13 @@ const RoomPage = async ({ params }: RoomPageProps) => {
                   </p>
 
                   {/* Info grid */}
-                  <div className="rounded-2xl border divide-y">
+                  <div className="divide-y rounded-2xl border">
                     {/* Price */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <BanknoteIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Preço</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Preço
+                      </span>
                       <span className="text-sm font-medium">
                         {room.priceInCents === 0
                           ? "Gratuito"
@@ -76,35 +90,59 @@ const RoomPage = async ({ params }: RoomPageProps) => {
                     {/* Opening hours */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <ClockIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Horário</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Horário
+                      </span>
                       <span className="text-sm font-medium">
-                        {room.openingTime.slice(0, 5)} – {room.closingTime.slice(0, 5)}
+                        {room.openingTime.slice(0, 5)} –{" "}
+                        {room.closingTime.slice(0, 5)}
                       </span>
                     </div>
                     {/* Available weekdays */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Dias disponíveis</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Dias disponíveis
+                      </span>
                       <span className="text-right text-sm font-medium">
                         {room.availableWeekDays.length === 7
                           ? "Todos os dias"
                           : room.availableWeekDays
-                              .map((d) => ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][d])
+                              .map(
+                                (d) =>
+                                  [
+                                    "Dom",
+                                    "Seg",
+                                    "Ter",
+                                    "Qua",
+                                    "Qui",
+                                    "Sex",
+                                    "Sáb",
+                                  ][d],
+                              )
                               .join(", ")}
                       </span>
                     </div>
                     {/* Capacity */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <UsersIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Capacidade máxima</span>
-                      <span className="text-sm font-medium">{room.maxCapacity} pessoas</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Capacidade máxima
+                      </span>
+                      <span className="text-sm font-medium">
+                        {room.maxCapacity} pessoas
+                      </span>
                     </div>
                     {/* Max simultaneous apartments */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <LayersIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Aptos simultâneos</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Aptos simultâneos
+                      </span>
                       <span className="text-sm font-medium">
-                        {room.maxOverlaps === 0 ? "1 por vez" : `Até ${room.maxOverlaps + 1}`}
+                        {room.maxOverlaps === 0
+                          ? "1 por vez"
+                          : `Até ${room.maxOverlaps + 1}`}
                       </span>
                     </div>
                     {/* Minor alone */}
@@ -114,7 +152,9 @@ const RoomPage = async ({ params }: RoomPageProps) => {
                       ) : (
                         <ShieldXIcon className="text-muted-foreground h-4 w-4 shrink-0" />
                       )}
-                      <span className="text-muted-foreground flex-1 text-sm">Menor desacompanhado</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Menor desacompanhado
+                      </span>
                       <span className="text-sm font-medium">
                         {room.minorAloneAllowed ? "Permitido" : "Não permitido"}
                       </span>
@@ -122,20 +162,32 @@ const RoomPage = async ({ params }: RoomPageProps) => {
                     {/* Daily limit */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Máx. reservas por dia</span>
-                      <span className="text-sm font-medium">{room.maxBookingsDailyLimit}</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Máx. reservas por dia
+                      </span>
+                      <span className="text-sm font-medium">
+                        {room.maxBookingsDailyLimit}
+                      </span>
                     </div>
                     {/* Weekly limit */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Máx. reservas por semana</span>
-                      <span className="text-sm font-medium">{room.maxBookingsWeeklyLimit}</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Máx. reservas por semana
+                      </span>
+                      <span className="text-sm font-medium">
+                        {room.maxBookingsWeeklyLimit}
+                      </span>
                     </div>
                     {/* Monthly limit */}
                     <div className="flex items-center gap-3 px-4 py-3">
                       <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
-                      <span className="text-muted-foreground flex-1 text-sm">Máx. reservas por mês</span>
-                      <span className="text-sm font-medium">{room.maxBookingsMonthlyLimit}</span>
+                      <span className="text-muted-foreground flex-1 text-sm">
+                        Máx. reservas por mês
+                      </span>
+                      <span className="text-sm font-medium">
+                        {room.maxBookingsMonthlyLimit}
+                      </span>
                     </div>
                   </div>
 
