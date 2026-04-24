@@ -2,6 +2,7 @@
 
 import {
   CalendarIcon,
+  LayoutGridIcon,
   LogInIcon,
   LogOutIcon,
   MenuIcon,
@@ -87,6 +88,16 @@ export const Header = () => {
                       <Link href="/profile">
                         <UserIcon className="h-4 w-4" />
                         Meu perfil
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="justify-start gap-2"
+                      asChild
+                    >
+                      <Link href="/">
+                        <LayoutGridIcon className="h-4 w-4" />
+                        Salas
                       </Link>
                     </Button>
                     <Button

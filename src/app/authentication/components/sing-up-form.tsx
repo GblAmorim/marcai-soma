@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { XIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -48,6 +48,49 @@ const ClearableInput = ({
           <XIcon className="h-3.5 w-3.5" />
         </button>
       )}
+    </div>
+  );
+};
+
+const PasswordInput = ({
+  id,
+  placeholder,
+  value,
+  onChange,
+  autoComplete,
+}: {
+  id?: string;
+  placeholder?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  autoComplete?: string;
+}) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required
+        autoComplete={autoComplete}
+        className="pr-10"
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+        aria-label={show ? "Ocultar senha" : "Mostrar senha"}
+      >
+        {show ? (
+          <EyeOffIcon className="h-4 w-4" />
+        ) : (
+          <EyeIcon className="h-4 w-4" />
+        )}
+      </button>
     </div>
   );
 };
@@ -531,11 +574,11 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <ClearableInput
+                      <PasswordInput
                         placeholder="Digite sua senha"
-                        type="password"
-                        {...field}
-                        onClear={() => field.onChange("")}
+                        value={field.value}
+                        onChange={field.onChange}
+                        autoComplete="new-password"
                       />
                     </FormControl>
                     <FormMessage />
@@ -549,11 +592,11 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>Confirmar senha</FormLabel>
                     <FormControl>
-                      <ClearableInput
+                      <PasswordInput
                         placeholder="Digite sua senha novamente"
-                        type="password"
-                        {...field}
-                        onClear={() => field.onChange("")}
+                        value={field.value}
+                        onChange={field.onChange}
+                        autoComplete="new-password"
                       />
                     </FormControl>
                     <FormMessage />

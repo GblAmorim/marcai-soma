@@ -115,28 +115,30 @@ const BookingsPage = () => {
           />
         </div>
 
-        <Tabs
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as FilterStatus)}
-        >
-          <TabsList className="w-full">
-            <TabsTrigger value="all" className="flex-1">
-              Todas
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="flex-1">
-              Pendentes
-            </TabsTrigger>
-            <TabsTrigger value="active" className="flex-1">
-              Confirmadas
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="flex-1">
-              Concluídas
-            </TabsTrigger>
-            <TabsTrigger value="cancelled" className="flex-1">
-              Canceladas
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="overflow-x-auto">
+          <Tabs
+            value={statusFilter}
+            onValueChange={(v) => setStatusFilter(v as FilterStatus)}
+          >
+            <TabsList className="w-max min-w-full">
+              <TabsTrigger value="all" className="flex-1">
+                Todas
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="flex-1">
+                Pendentes
+              </TabsTrigger>
+              <TabsTrigger value="active" className="flex-1">
+                Confirmadas
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="flex-1">
+                Concluídas
+              </TabsTrigger>
+              <TabsTrigger value="cancelled" className="flex-1">
+                Canceladas
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         {bookings.length > 0 ? (
           <div className="flex flex-col gap-3">
