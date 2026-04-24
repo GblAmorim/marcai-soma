@@ -3,6 +3,7 @@
 import { SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Room } from "@/lib/rooms";
@@ -28,6 +29,15 @@ const RoomsList = ({ rooms }: RoomsListProps) => {
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">(
     "all",
   );
+
+  const hasActiveFilters =
+    search !== "" || activeCategory !== "Todos" || statusFilter !== "all";
+
+  const clearFilters = () => {
+    setSearch("");
+    setActiveCategory("Todos");
+    setStatusFilter("all");
+  };
 
   const categories = useMemo(() => {
     const unique = Array.from(new Set(rooms.map((r) => r.category.name)));
@@ -55,19 +65,26 @@ const RoomsList = ({ rooms }: RoomsListProps) => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Search */}
-      <div className="relative">
-        <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-        <Input
-          placeholder="Buscar espaço..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + clear */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="Buscar espaço..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {hasActiveFilters && (
+          <Button variant="outline" size="sm" onClick={clearFilters}>
+            Limpar busca
+          </Button>
+        )}
       </div>
 
       {/* Category chips */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
         {categories.map((cat) => (
           <button
             key={cat}

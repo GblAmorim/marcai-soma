@@ -79,15 +79,24 @@ const SignInForm = () => {
     };
 
     if (isPhoneNumber(values.identifier)) {
-      const { error } = await authClient.$fetch("/sign-in/phone-number", {
+      const res = await fetch("/api/sign-in-by-phone", {
         method: "POST",
-        body: {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           phoneNumber: values.identifier.replace(/\D/g, ""),
           password: values.password,
-        },
+        }),
       });
-      if (error) {
-        handleSignInError(undefined, error.message);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        handleSignInError(
+          data.error,
+          data.error === "INVALID_PHONE_NUMBER_OR_PASSWORD"
+            ? undefined
+            : (data.error ?? "Erro ao fazer login."),
+        );
         return;
       }
       router.push("/");

@@ -85,16 +85,23 @@ async function main() {
     });
     console.log("👤 Morador criado — joao@marcai.com");
 
-    // ── Categoria de sala ────────────────────────────────────────
+    // ── Categorias ────────────────────────────────────────────────
     const categoryId = crypto.randomUUID();
     await db.insert(categoryTable).values({
       id: categoryId,
       name: "Salões",
       slug: "saloes",
     });
-    console.log("📂 Categoria criada.");
 
-    // ── Sala ─────────────────────────────────────────────────────
+    const categoryLazerId = crypto.randomUUID();
+    await db.insert(categoryTable).values({
+      id: categoryLazerId,
+      name: "Lazer",
+      slug: "lazer",
+    });
+    console.log("📂 Categorias criadas.");
+
+    // ── Sala: Salão de Festa ──────────────────────────────────────
     const roomId = crypto.randomUUID();
     await db.insert(roomTable).values({
       id: roomId,
@@ -117,7 +124,32 @@ async function main() {
       maxBookingsWeeklyLimit: 2,
       maxBookingsMonthlyLimit: 4,
     });
-    console.log("🏠 Sala criada.");
+
+    // ── Sala: Churrasqueira ───────────────────────────────────────
+    const bbqRoomId = crypto.randomUUID();
+    await db.insert(roomTable).values({
+      id: bbqRoomId,
+      condominiumId,
+      categoryId: categoryLazerId,
+      slug: "churrasqueira",
+      name: "Churrasqueira",
+      description:
+        "Área de churrasco coberta com churrasqueira a carvão, mesas e pias. Reserva por dia inteiro.",
+      imageUrl: "/banner-01.png",
+      priceInCents: 5000,
+      openingTime: "09:00",
+      closingTime: "20:00",
+      availableWeekDays: [5, 6, 0],
+      minorAloneAllowed: true,
+      floor: "1",
+      maxCapacity: 30,
+      maxOverlaps: 0,
+      dayUse: true,
+      maxBookingsDailyLimit: 1,
+      maxBookingsWeeklyLimit: 1,
+      maxBookingsMonthlyLimit: 2,
+    });
+    console.log("🏠 Salas criadas.");
 
     // ── Regras da sala ───────────────────────────────────────────
     await db.insert(roomRulesTable).values({
@@ -129,6 +161,16 @@ async function main() {
       id: crypto.randomUUID(),
       roomId,
       rule: "O espaço deve ser deixado limpo ao final do uso.",
+    });
+    await db.insert(roomRulesTable).values({
+      id: crypto.randomUUID(),
+      roomId: bbqRoomId,
+      rule: "Carvão não é fornecido pelo condomínio.",
+    });
+    await db.insert(roomRulesTable).values({
+      id: crypto.randomUUID(),
+      roomId: bbqRoomId,
+      rule: "A área deve ser limpa e a churrasqueira esfriada antes de sair.",
     });
     console.log("📋 Regras criadas.");
 
@@ -142,6 +184,21 @@ async function main() {
       id: crypto.randomUUID(),
       roomId,
       item: "Cozinha equipada",
+    });
+    await db.insert(roomItemsTable).values({
+      id: crypto.randomUUID(),
+      roomId: bbqRoomId,
+      item: "Churrasqueira a carvão",
+    });
+    await db.insert(roomItemsTable).values({
+      id: crypto.randomUUID(),
+      roomId: bbqRoomId,
+      item: "Mesas e bancos de madeira",
+    });
+    await db.insert(roomItemsTable).values({
+      id: crypto.randomUUID(),
+      roomId: bbqRoomId,
+      item: "Pia e bancada",
     });
     console.log("📦 Itens criados.");
 
@@ -169,7 +226,7 @@ async function main() {
     console.log("   Apartamento: Torre 1 · Bloco A · 101");
     console.log("   Admin      : admin@marcai.com");
     console.log("   Morador    : joao@marcai.com");
-    console.log("   Sala       : Salão de Festa (10h–22h)");
+    console.log("   Salas      : Salão de Festa (10h–22h) | Churrasqueira dayUse (Sex–Dom, 09h–20h)");
   } catch (error) {
     console.error("❌ Erro durante o seeding:", error);
     throw error;

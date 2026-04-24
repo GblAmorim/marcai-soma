@@ -2,7 +2,12 @@
 
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { BuildingIcon, CalendarIcon, CheckCircleIcon, ClockIcon } from "lucide-react";
+import {
+  BuildingIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -24,8 +29,10 @@ const BookingConfirmPage = () => {
   const dateParam = searchParams.get("date");
   const startTime = searchParams.get("start");
   const endTime = searchParams.get("end");
+  const isDayUse = searchParams.get("dayuse") === "1";
 
-  if (!dateParam || !startTime || !endTime) notFound();
+  if (!dateParam) notFound();
+  if (!isDayUse && (!startTime || !endTime)) notFound();
 
   const dateFormatted = format(
     parseISO(dateParam),
@@ -34,12 +41,12 @@ const BookingConfirmPage = () => {
   );
 
   const user = session?.user as
-    | (typeof session.user & { apartment?: string })
+    | ({ apartment?: string } & Record<string, unknown>)
     | undefined;
 
   const handleConfirm = () => {
     toast.success("Reserva confirmada com sucesso!");
-    router.push("/bookings");
+    router.push("/");
   };
 
   return (
@@ -61,7 +68,9 @@ const BookingConfirmPage = () => {
             </span>
             <div className="flex flex-1 items-center justify-between gap-2">
               <span className="text-muted-foreground text-sm">Espaço</span>
-              <span className="text-right text-sm font-medium">{room.name}</span>
+              <span className="text-right text-sm font-medium">
+                {room.name}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-3 px-4 py-3">
@@ -70,7 +79,9 @@ const BookingConfirmPage = () => {
             </span>
             <div className="flex flex-1 items-center justify-between gap-2">
               <span className="text-muted-foreground text-sm">Data</span>
-              <span className="text-right text-sm font-medium capitalize">{dateFormatted}</span>
+              <span className="text-right text-sm font-medium capitalize">
+                {dateFormatted}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-3 px-4 py-3">
@@ -80,7 +91,7 @@ const BookingConfirmPage = () => {
             <div className="flex flex-1 items-center justify-between gap-2">
               <span className="text-muted-foreground text-sm">Horário</span>
               <span className="text-right text-sm font-medium">
-                {startTime} – {endTime}
+                {isDayUse ? "Dia todo" : `${startTime} – ${endTime}`}
               </span>
             </div>
           </div>
@@ -90,7 +101,9 @@ const BookingConfirmPage = () => {
                 <BuildingIcon className="h-4 w-4" />
               </span>
               <div className="flex flex-1 items-center justify-between gap-2">
-                <span className="text-muted-foreground text-sm">Apartamento</span>
+                <span className="text-muted-foreground text-sm">
+                  Apartamento
+                </span>
                 <span className="text-right text-sm font-medium">
                   Apto {user.apartment}
                 </span>

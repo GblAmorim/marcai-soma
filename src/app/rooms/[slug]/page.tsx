@@ -1,7 +1,11 @@
 import {
+  BanknoteIcon,
   CalendarDaysIcon,
   CheckIcon,
+  ClockIcon,
   LayersIcon,
+  ShieldCheckIcon,
+  ShieldXIcon,
   UsersIcon,
 } from "lucide-react";
 import Image from "next/image";
@@ -56,18 +60,82 @@ const RoomPage = async ({ params }: RoomPageProps) => {
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {room.description}
                   </p>
-                  <div className="flex gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <UsersIcon className="text-primary h-4 w-4" />
+
+                  {/* Info grid */}
+                  <div className="rounded-2xl border divide-y">
+                    {/* Price */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <BanknoteIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Preço</span>
                       <span className="text-sm font-medium">
-                        Até {room.maxCapacity} pessoas
+                        {room.priceInCents === 0
+                          ? "Gratuito"
+                          : `R$ ${(room.priceInCents / 100).toFixed(2).replace(".", ",")}`}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <LayersIcon className="text-primary h-4 w-4" />
+                    {/* Opening hours */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <ClockIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Horário</span>
                       <span className="text-sm font-medium">
-                        Andar {room.floor}
+                        {room.openingTime.slice(0, 5)} – {room.closingTime.slice(0, 5)}
                       </span>
+                    </div>
+                    {/* Available weekdays */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Dias disponíveis</span>
+                      <span className="text-right text-sm font-medium">
+                        {room.availableWeekDays.length === 7
+                          ? "Todos os dias"
+                          : room.availableWeekDays
+                              .map((d) => ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][d])
+                              .join(", ")}
+                      </span>
+                    </div>
+                    {/* Capacity */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <UsersIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Capacidade máxima</span>
+                      <span className="text-sm font-medium">{room.maxCapacity} pessoas</span>
+                    </div>
+                    {/* Max simultaneous apartments */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <LayersIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Aptos simultâneos</span>
+                      <span className="text-sm font-medium">
+                        {room.maxOverlaps === 0 ? "1 por vez" : `Até ${room.maxOverlaps + 1}`}
+                      </span>
+                    </div>
+                    {/* Minor alone */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      {room.minorAloneAllowed ? (
+                        <ShieldCheckIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      ) : (
+                        <ShieldXIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      )}
+                      <span className="text-muted-foreground flex-1 text-sm">Menor desacompanhado</span>
+                      <span className="text-sm font-medium">
+                        {room.minorAloneAllowed ? "Permitido" : "Não permitido"}
+                      </span>
+                    </div>
+                    {/* Daily limit */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Máx. reservas por dia</span>
+                      <span className="text-sm font-medium">{room.maxBookingsDailyLimit}</span>
+                    </div>
+                    {/* Weekly limit */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Máx. reservas por semana</span>
+                      <span className="text-sm font-medium">{room.maxBookingsWeeklyLimit}</span>
+                    </div>
+                    {/* Monthly limit */}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <CalendarDaysIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <span className="text-muted-foreground flex-1 text-sm">Máx. reservas por mês</span>
+                      <span className="text-sm font-medium">{room.maxBookingsMonthlyLimit}</span>
                     </div>
                   </div>
 
@@ -133,6 +201,7 @@ const RoomPage = async ({ params }: RoomPageProps) => {
                   openingTime={room.openingTime}
                   closingTime={room.closingTime}
                   availableWeekDays={room.availableWeekDays}
+                  dayUse={room.dayUse}
                 />
               </AccordionContent>
             </AccordionItem>

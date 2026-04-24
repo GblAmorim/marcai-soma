@@ -30,6 +30,10 @@ export const auth = betterAuth({
     schema,
   }),
   user: {
+    changeEmail: {
+      enabled: true,
+      updateEmailWithoutVerification: true,
+    },
     modelName: "userTable",
     fields: {
       name: "firstName",

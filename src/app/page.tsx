@@ -1,10 +1,17 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
 import Footer from "@/components/common/footer";
 import { Header } from "@/components/common/header";
 import { getRooms } from "@/db/queries";
+import { auth } from "@/lib/auth";
 
 import RoomsList from "./components/rooms-list";
 
 const Home = async () => {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) redirect("/authentication");
+
   const rooms = await getRooms();
 
   return (

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { BookingCard } from "@/components/bookings/booking-card";
 import { BookingDetail } from "@/components/bookings/booking-detail";
 import { Header } from "@/components/common/header";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
@@ -34,6 +35,9 @@ const BookingsPage = () => {
   const [localBookings, setLocalBookings] = useState<Booking[]>(MOCK_BOOKINGS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>(ALL);
+
+  const hasActiveFilters = search !== "" || statusFilter !== ALL;
+  const clearFilters = () => { setSearch(""); setStatusFilter(ALL); };
   const [selected, setSelected] = useState<Booking | null>(null);
 
   if (!isPending && !session?.user) {
@@ -101,18 +105,25 @@ const BookingsPage = () => {
           </h1>
         </div>
 
-        <div className="relative">
-          <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <Input
-            placeholder={
-              isAdmin
-                ? "Buscar por sala, apto ou nome..."
-                : "Buscar por sala..."
-            }
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <SearchIcon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder={
+                isAdmin
+                  ? "Buscar por sala, apto ou nome..."
+                  : "Buscar por sala..."
+              }
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              Limpar busca
+            </Button>
+          )}
         </div>
 
         <div className="overflow-x-auto">

@@ -2,20 +2,16 @@
 
 import {
   BuildingIcon,
-  CalendarIcon,
   EyeIcon,
   EyeOffIcon,
-  IdCardIcon,
   KeyRoundIcon,
   LogOutIcon,
   MailIcon,
   PencilIcon,
   PhoneIcon,
-  ShieldCheckIcon,
   UserIcon,
   XIcon,
 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -34,35 +30,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { maskPhone } from "@/lib/masks";
-
-// ── Formatters ────────────────────────────────────────────────────────────────
-
-function formatBirthDate(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const [datePart] = raw.split("T");
-  const parts = datePart.split("-");
-  if (parts.length !== 3) return raw;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-}
-
-function maskCpf(value: string): string {
-  return value
-    .replace(/\D/g, "")
-    .slice(0, 11)
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-
-function maskRg(value: string): string {
-  return value
-    .replace(/[^\dXx]/g, "")
-    .slice(0, 9)
-    .replace(/(\d{2})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})([\dXx]{1})$/, "$1-$2");
-}
 
 const PASSWORD_ERROR_MAP: Record<string, string> = {
   "Invalid password": "Senha atual incorreta.",
@@ -262,21 +229,41 @@ const EditContactModal = ({
     e.preventDefault();
     setIsLoading(true);
     try {
-      const updates: Record<string, string> = {};
-      if (email !== initialEmail) updates.email = email;
-      if (phone !== initialPhone)
-        updates.phoneNumber = phone.replace(/\D/g, "");
+      const emailChanged = email !== initialEmail;
+      const rawPhone = phone.replace(/\D/g, "");
+      const phoneChanged = rawPhone !== initialPhone.replace(/\D/g, "");
 
-      if (Object.keys(updates).length === 0) {
+      if (!emailChanged && !phoneChanged) {
         onClose();
         return;
       }
 
-      const { error } = await authClient.updateUser(updates);
-      if (error) {
-        toast.error(error.message ?? "Erro ao atualizar dados.");
-        return;
+      if (emailChanged) {
+        const { error } = await authClient.changeEmail({
+          newEmail: email,
+          callbackURL: "/profile",
+        });
+        if (error) {
+          toast.error(error.message ?? "Erro ao atualizar e-mail.");
+          return;
+        }
       }
+
+      if (phoneChanged) {
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneNumber: rawPhone }),
+        });
+        if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          toast.error(data.error ?? "Erro ao atualizar celular.");
+          return;
+        }
+      }
+
       toast.success("Dados atualizados com sucesso!");
       onClose();
     } finally {
@@ -293,25 +280,53 @@ const EditContactModal = ({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="editEmail">E-mail</Label>
-            <Input
-              id="editEmail"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+            <div className="relative">
+              <Input
+                id="editEmail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className={email ? "pr-9" : ""}
+              />
+              {email && (
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setEmail("")}
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                  aria-label="Limpar e-mail"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="editPhone">Celular</Label>
-            <Input
-              id="editPhone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(maskPhone(e.target.value))}
-              placeholder="(00) 90000-0000"
-              autoComplete="tel"
-            />
+            <div className="relative">
+              <Input
+                id="editPhone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(maskPhone(e.target.value))}
+                placeholder="(00) 90000-0000"
+                autoComplete="tel"
+                className={phone ? "pr-9" : ""}
+              />
+              {phone && (
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setPhone("")}
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                  aria-label="Limpar celular"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
           <DialogFooter className="pt-2">
             <Button
@@ -334,38 +349,38 @@ const EditContactModal = ({
 
 // ── DocumentModal ─────────────────────────────────────────────────────────────
 
-const DocumentModal = ({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) => (
-  <Dialog open={open} onOpenChange={onClose}>
-    <DialogContent className="max-w-sm">
-      <DialogHeader>
-        <DialogTitle>Documento enviado</DialogTitle>
-      </DialogHeader>
-      <div className="relative aspect-3/2 w-full overflow-hidden rounded-xl border">
-        <Image
-          src="/banner-01.png"
-          alt="Documento de identidade"
-          fill
-          className="object-cover"
-        />
-      </div>
-      <p className="text-muted-foreground text-center text-xs">
-        Este é o documento enviado na verificação de identidade.
-      </p>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose} className="w-full">
-          <XIcon className="mr-2 h-4 w-4" />
-          Fechar
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+// const DocumentModal = ({
+//   open,
+//   onClose,
+// }: {
+//   open: boolean;
+//   onClose: () => void;
+// }) => (
+//   <Dialog open={open} onOpenChange={onClose}>
+//     <DialogContent className="max-w-sm">
+//       <DialogHeader>
+//         <DialogTitle>Documento enviado</DialogTitle>
+//       </DialogHeader>
+//       <div className="relative aspect-3/2 w-full overflow-hidden rounded-xl border">
+//         <Image
+//           src="/banner-01.png"
+//           alt="Documento de identidade"
+//           fill
+//           className="object-cover"
+//         />
+//       </div>
+//       <p className="text-muted-foreground text-center text-xs">
+//         Este é o documento enviado na verificação de identidade.
+//       </p>
+//       <DialogFooter>
+//         <Button variant="outline" onClick={onClose} className="w-full">
+//           <XIcon className="mr-2 h-4 w-4" />
+//           Fechar
+//         </Button>
+//       </DialogFooter>
+//     </DialogContent>
+//   </Dialog>
+// );
 
 // ── InfoCell ──────────────────────────────────────────────────────────────────
 
@@ -421,7 +436,7 @@ const ProfilePage = () => {
   const router = useRouter();
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [editContactOpen, setEditContactOpen] = useState(false);
-  const [documentOpen, setDocumentOpen] = useState(false);
+  // const [documentOpen, setDocumentOpen] = useState(false);
   const [extras, setExtras] = useState<ProfileExtras | null>(null);
 
   useEffect(() => {
@@ -454,21 +469,7 @@ const ProfilePage = () => {
       .toUpperCase() ||
     "?";
 
-  const roleLabel =
-    user?.role === "admin"
-      ? "Administrador"
-      : user?.role === "resident"
-        ? "Morador"
-        : null;
-
-  const aptLabel = extras?.apartment
-    ? `Torre ${extras.apartment.tower} – Bl. ${extras.apartment.apartmentBlock} – Apto ${extras.apartment.apartmentNumber}`
-    : null;
-
   const formattedPhone = user?.phoneNumber ? maskPhone(user.phoneNumber) : null;
-  const formattedCpf = user?.cpf ? maskCpf(user.cpf) : null;
-  const formattedRg = user?.rg ? maskRg(user.rg) : null;
-  const formattedBirthDate = formatBirthDate(user?.birthDate);
 
   const handleLogout = async () => {
     await authClient.signOut();
@@ -480,18 +481,12 @@ const ProfilePage = () => {
       <Header />
 
       <div className="flex flex-col gap-6 px-5 pb-10">
-        {/* Avatar + name */}
+        {/* Avatar */}
         <div className="flex flex-col items-center gap-3 pt-6">
           <Avatar className="h-28 w-28">
             <AvatarImage src={user?.image as string | undefined} />
             <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <h1 className="text-xl font-bold">{user?.name ?? "—"}</h1>
-            {aptLabel && (
-              <span className="text-muted-foreground text-sm">{aptLabel}</span>
-            )}
-          </div>
         </div>
 
         {/* Dados pessoais */}
@@ -499,45 +494,26 @@ const ProfilePage = () => {
           <div className="border-b px-4 py-3">
             <h2 className="text-sm font-semibold">Dados pessoais</h2>
           </div>
+          <div className="border-b px-4">
+            <InfoCell
+              icon={<UserIcon className="h-4 w-4" />}
+              label="Nome"
+              value={fullName}
+            />
+          </div>
           <div className="grid grid-cols-2 divide-x px-0">
-            <div className="divide-y px-4">
-              <InfoCell
-                icon={<UserIcon className="h-4 w-4" />}
-                label="Nome"
-                value={fullName}
-              />
-              <InfoCell
-                icon={<CalendarIcon className="h-4 w-4" />}
-                label="Data de nascimento"
-                value={formattedBirthDate}
-              />
-            </div>
             <div className="divide-y px-4">
               <InfoCell
                 icon={<MailIcon className="h-4 w-4" />}
                 label="E-mail"
                 value={user?.email}
               />
+            </div>
+            <div className="divide-y px-4">
               <InfoCell
                 icon={<PhoneIcon className="h-4 w-4" />}
                 label="Celular"
                 value={formattedPhone}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 divide-x border-t px-0">
-            <div className="px-4">
-              <InfoCell
-                icon={<IdCardIcon className="h-4 w-4" />}
-                label="CPF"
-                value={formattedCpf}
-              />
-            </div>
-            <div className="px-4">
-              <InfoCell
-                icon={<IdCardIcon className="h-4 w-4" />}
-                label="RG"
-                value={formattedRg}
               />
             </div>
           </div>
@@ -550,15 +526,6 @@ const ProfilePage = () => {
               />
             </div>
           )}
-          {roleLabel && (
-            <div className="border-t px-4">
-              <InfoCell
-                icon={<ShieldCheckIcon className="h-4 w-4" />}
-                label="Perfil"
-                value={roleLabel}
-              />
-            </div>
-          )}
         </div>
 
         {/* Unidade */}
@@ -567,14 +534,23 @@ const ProfilePage = () => {
             <div className="border-b px-4 py-3">
               <h2 className="text-sm font-semibold">Unidade</h2>
             </div>
+            <div className="border-b px-4">
+              <InfoCell
+                icon={<BuildingIcon className="h-4 w-4" />}
+                label="Condomínio"
+                value={extras?.condominiumName}
+              />
+            </div>
             <div className="grid grid-cols-2 divide-x px-0">
-              <div className="px-4">
-                <InfoCell
-                  icon={<BuildingIcon className="h-4 w-4" />}
-                  label="Condomínio"
-                  value={extras?.condominiumName}
-                />
-              </div>
+              {extras?.apartment && (
+                <div className="px-4">
+                  <InfoCell
+                    icon={<BuildingIcon className="h-4 w-4" />}
+                    label="Apartamento"
+                    value={`Apto ${extras.apartment.apartmentNumber}`}
+                  />
+                </div>
+              )}
               <div className="divide-y px-4">
                 <InfoCell
                   icon={<BuildingIcon className="h-4 w-4" />}
@@ -587,20 +563,11 @@ const ProfilePage = () => {
                 />
               </div>
             </div>
-            {extras?.apartment && (
-              <div className="border-t px-4">
-                <InfoCell
-                  icon={<BuildingIcon className="h-4 w-4" />}
-                  label="Apartamento"
-                  value={`Apto ${extras.apartment.apartmentNumber}`}
-                />
-              </div>
-            )}
           </div>
         )}
 
-        {/* Verificação de identidade */}
-        <div className="rounded-2xl border">
+        {/* Documento enviado */}
+        {/* <div className="rounded-2xl border">
           <div className="border-b px-4 py-3">
             <h2 className="text-sm font-semibold">Verificação de identidade</h2>
           </div>
@@ -624,7 +591,7 @@ const ProfilePage = () => {
               Ver documento
             </Button>
           </div>
-        </div>
+        </div> */}
 
         {/* Ações da conta */}
         <div className="flex flex-col gap-3">
@@ -665,10 +632,10 @@ const ProfilePage = () => {
         initialEmail={user?.email ?? ""}
         initialPhone={formattedPhone ?? ""}
       />
-      <DocumentModal
+      {/* <DocumentModal
         open={documentOpen}
         onClose={() => setDocumentOpen(false)}
-      />
+      /> */}
     </>
   );
 };
