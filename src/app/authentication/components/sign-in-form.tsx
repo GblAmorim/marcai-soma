@@ -8,15 +8,9 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 
+import ClearableInput from "@/components/common/clearableInput";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -43,7 +37,7 @@ const formSchema = z.object({
       (val) => z.email().safeParse(val).success || phoneRegex.test(val),
       "Digite um e-mail ou celular válido.",
     ),
-  password: z.string().min(8, "Senha inválida."),
+  password: z.string().min(1, "Senha é obrigatória."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -127,11 +121,6 @@ const SignInForm = () => {
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>Entrar</CardTitle>
-          <CardDescription>Faça login para continuar.</CardDescription>
-        </CardHeader>
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
             <CardContent className="grid gap-6">
@@ -142,9 +131,11 @@ const SignInForm = () => {
                   <FormItem>
                     <FormLabel>E-mail ou celular</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Digite o seu e-mail ou celular"
+                      <ClearableInput
+                        placeholder="Digite seu e-mail ou celular"
+                        type="text"
                         {...field}
+                        onClear={() => field.onChange("")}
                       />
                     </FormControl>
                     <FormMessage />

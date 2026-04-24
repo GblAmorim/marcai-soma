@@ -1,13 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { EyeIcon, EyeOffIcon, XIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
 
+import ClearableInput from "@/components/common/clearableInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,31 +27,7 @@ import {
 } from "@/components/ui/searchable-select";
 import { authClient } from "@/lib/auth-client";
 import { maskCpf, maskPhone, maskRg } from "@/lib/masks";
-import { clearString, cn } from "@/lib/utils";
-
-const ClearableInput = ({
-  onClear,
-  className,
-  ...props
-}: React.ComponentProps<typeof Input> & { onClear: () => void }) => {
-  const hasValue = !!props.value;
-  return (
-    <div className="relative">
-      <Input {...props} className={cn(className, hasValue && "pr-8")} />
-      {hasValue && (
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={onClear}
-          aria-label="Limpar campo"
-          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 transition-colors"
-        >
-          <XIcon className="h-3.5 w-3.5" />
-        </button>
-      )}
-    </div>
-  );
-};
+import { clearString } from "@/lib/utils";
 
 const PasswordInput = ({
   id,
@@ -390,13 +367,38 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
+                name="apartmentId"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Apartamento</FormLabel>
+                    <FormControl>
+                      <SearchableSelect
+                        options={apartmentOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={
+                          condominiumId
+                            ? "Selecione o apartamento"
+                            : "Selecione o condomínio primeiro"
+                        }
+                        searchPlaceholder="Pesquisar apartamento..."
+                        emptyMessage="Nenhum apartamento encontrado."
+                        disabled={!condominiumId || loadingApartments}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nome</FormLabel>
                     <FormControl>
                       <ClearableInput
-                        placeholder="Digite o seu nome"
+                        placeholder="Digite seu nome"
                         {...field}
                         onClear={() => field.onChange("")}
                       />
@@ -413,7 +415,7 @@ const SignUpForm = () => {
                     <FormLabel>Sobrenome</FormLabel>
                     <FormControl>
                       <ClearableInput
-                        placeholder="Digite o seu sobrenome"
+                        placeholder="Digite seu sobrenome"
                         {...field}
                         onClear={() => field.onChange("")}
                       />
@@ -482,24 +484,12 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
-                name="apartmentId"
+                name="birthDate"
                 render={({ field }) => (
-                  <FormItem className="min-w-0 overflow-hidden">
-                    <FormLabel>Apartamento</FormLabel>
+                  <FormItem>
+                    <FormLabel>Data de nascimento</FormLabel>
                     <FormControl>
-                      <SearchableSelect
-                        options={apartmentOptions}
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder={
-                          condominiumId
-                            ? "Selecione o apartamento"
-                            : "Selecione o condomínio primeiro"
-                        }
-                        searchPlaceholder="Pesquisar apartamento..."
-                        emptyMessage="Nenhum apartamento encontrado."
-                        disabled={!condominiumId || loadingApartments}
-                      />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -513,24 +503,11 @@ const SignUpForm = () => {
                     <FormLabel>E-mail</FormLabel>
                     <FormControl>
                       <ClearableInput
-                        placeholder="Digite o seu e-mail"
+                        placeholder="Digite seu e-mail"
                         type="email"
                         {...field}
                         onClear={() => field.onChange("")}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="birthDate"
-                render={({ field }) => (
-                  <FormItem className={isMinor ? "" : "col-span-2"}>
-                    <FormLabel>Data de nascimento</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -541,7 +518,7 @@ const SignUpForm = () => {
                   control={form.control}
                   name="responsibleId"
                   render={({ field }) => (
-                    <FormItem className="min-w-0">
+                    <FormItem className="col-span-2">
                       <FormLabel>Responsável</FormLabel>
                       <FormControl>
                         <SearchableSelect
@@ -575,7 +552,7 @@ const SignUpForm = () => {
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
                       <PasswordInput
-                        placeholder="Digite sua senha"
+                        placeholder="Digite a senha"
                         value={field.value}
                         onChange={field.onChange}
                         autoComplete="new-password"
@@ -593,7 +570,7 @@ const SignUpForm = () => {
                     <FormLabel>Confirmar senha</FormLabel>
                     <FormControl>
                       <PasswordInput
-                        placeholder="Digite sua senha novamente"
+                        placeholder="Confirme a senha"
                         value={field.value}
                         onChange={field.onChange}
                         autoComplete="new-password"

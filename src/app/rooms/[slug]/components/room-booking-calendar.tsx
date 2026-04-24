@@ -169,14 +169,14 @@ const RoomBookingCalendar = ({
             <div className="flex items-start gap-3 rounded-2xl border p-4">
               <CalendarClockIcon className="text-primary mt-0.5 h-5 w-5 shrink-0" />
               <div className="flex flex-col gap-0.5">
-                <p className="text-sm font-semibold">Reserva pelo dia todo</p>
+                <p className="text-sm font-semibold">Reserva por dia</p>
                 <p className="text-muted-foreground text-xs">
                   Este espaço é reservado pelo período completo de
                   funcionamento:{" "}
                   <span className="font-medium">
                     {openingTime.slice(0, 5)} às {closingTime.slice(0, 5)}
                   </span>
-                  . A seleção de horário não é necessária.
+                  .
                 </p>
               </div>
             </div>

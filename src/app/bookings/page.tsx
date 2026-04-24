@@ -37,7 +37,10 @@ const BookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState<FilterStatus>(ALL);
 
   const hasActiveFilters = search !== "" || statusFilter !== ALL;
-  const clearFilters = () => { setSearch(""); setStatusFilter(ALL); };
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter(ALL);
+  };
   const [selected, setSelected] = useState<Booking | null>(null);
 
   if (!isPending && !session?.user) {
@@ -135,12 +138,12 @@ const BookingsPage = () => {
               <TabsTrigger value="all" className="flex-1">
                 Todas
               </TabsTrigger>
-              <TabsTrigger value="pending" className="flex-1">
+              {/* <TabsTrigger value="pending" className="flex-1">
                 Pendentes
-              </TabsTrigger>
+              </TabsTrigger> 
               <TabsTrigger value="active" className="flex-1">
                 Confirmadas
-              </TabsTrigger>
+              </TabsTrigger>*/}
               <TabsTrigger value="completed" className="flex-1">
                 Concluídas
               </TabsTrigger>

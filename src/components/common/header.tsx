@@ -85,9 +85,9 @@ export const Header = () => {
                       className="justify-start gap-2"
                       asChild
                     >
-                      <Link href="/profile">
-                        <UserIcon className="h-4 w-4" />
-                        Meu perfil
+                      <Link href="/">
+                        <LayoutGridIcon className="h-4 w-4" />
+                        Salas
                       </Link>
                     </Button>
                     <Button
@@ -95,9 +95,9 @@ export const Header = () => {
                       className="justify-start gap-2"
                       asChild
                     >
-                      <Link href="/">
-                        <LayoutGridIcon className="h-4 w-4" />
-                        Salas
+                      <Link href="/profile">
+                        <UserIcon className="h-4 w-4" />
+                        Meu perfil
                       </Link>
                     </Button>
                     <Button
