@@ -12,7 +12,7 @@ const ClearableInput = ({
   const hasValue = !!props.value;
   return (
     <div className="relative">
-      <Input {...props} className={cn(className, hasValue)} />
+      <Input {...props} className={cn(className, hasValue && "pr-9")} />
       {hasValue && (
         <button
           type="button"
