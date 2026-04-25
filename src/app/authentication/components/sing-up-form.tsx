@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -9,6 +8,7 @@ import { toast } from "sonner";
 import z from "zod";
 
 import ClearableInput from "@/components/common/clearableInput";
+import PasswordInput from "@/components/common/password-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,49 +28,6 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { maskCpf, maskPhone, maskRg } from "@/lib/masks";
 import { clearString } from "@/lib/utils";
-
-const PasswordInput = ({
-  id,
-  placeholder,
-  value,
-  onChange,
-  autoComplete,
-}: {
-  id?: string;
-  placeholder?: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  autoComplete?: string;
-}) => {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative">
-      <Input
-        id={id}
-        type={show ? "text" : "password"}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        required
-        autoComplete={autoComplete}
-        className="pr-10"
-      />
-      <button
-        type="button"
-        tabIndex={-1}
-        onClick={() => setShow((s) => !s)}
-        className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
-        aria-label={show ? "Ocultar senha" : "Mostrar senha"}
-      >
-        {show ? (
-          <EyeOffIcon className="h-4 w-4" />
-        ) : (
-          <EyeIcon className="h-4 w-4" />
-        )}
-      </button>
-    </div>
-  );
-};
 
 function calculateAge(birthDateStr: string): number {
   const birth = new Date(birthDateStr);
