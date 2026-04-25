@@ -30,7 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { type Booking, STATUS_CLASS, STATUS_LABEL } from "@/lib/bookings";
-import { generateTimeSlots, parseHour, slotIndex } from "@/lib/slots";
+import { generateTimeSlots, getSlotState, parseHour, slotIndex, toggleSlot } from "@/lib/slots";
 import { cn } from "@/lib/utils";
 
 import { DetailRow } from "./detail-row";
@@ -78,48 +78,6 @@ export const BookingDetail = ({
     "dd/MM/yyyy 'às' HH:mm",
     { locale: ptBR },
   );
-
-  // ── Slot logic ────────────────────────────────────────────────
-  function isSlotDisabled(slot: string) {
-    if (editSlots.length === 0) return false;
-    const idx = slotIndex(slot, timeSlots);
-    const selected = editSlots.map((s) => slotIndex(s, timeSlots));
-    const min = Math.min(...selected);
-    const max = Math.max(...selected);
-    if (editSlots.includes(slot)) return false;
-    const extL = idx === min - 1;
-    const extR = idx === max + 1;
-    if (!extL && !extR) return true;
-    if (editSlots.length >= maxHours) return true;
-    return false;
-  }
-
-  function handleSlotClick(slot: string) {
-    if (editSlots.includes(slot)) {
-      const idx = slotIndex(slot, timeSlots);
-      const selected = editSlots.map((s) => slotIndex(s, timeSlots));
-      const min = Math.min(...selected);
-      const max = Math.max(...selected);
-      if (idx === min || idx === max)
-        setEditSlots((p) => p.filter((s) => s !== slot));
-      return;
-    }
-    if (isSlotDisabled(slot)) return;
-    setEditSlots((p) => [...p, slot].sort());
-  }
-
-  function getSlotState(
-    slot: string,
-  ): "selected" | "edge" | "disabled" | "default" {
-    if (editSlots.includes(slot)) {
-      const selected = editSlots.map((s) => slotIndex(s, timeSlots));
-      const min = Math.min(...selected);
-      const max = Math.max(...selected);
-      const idx = slotIndex(slot, timeSlots);
-      return idx === min || idx === max ? "edge" : "selected";
-    }
-    return isSlotDisabled(slot) ? "disabled" : "default";
-  }
 
   const startEdit = () => {
     setEditDate(parseISO(booking.startDate));
@@ -291,13 +249,22 @@ export const BookingDetail = ({
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     {timeSlots.map((slot) => {
-                      const state = getSlotState(slot);
+                      const state = getSlotState(
+                        slot,
+                        editSlots,
+                        timeSlots,
+                        maxHours,
+                      );
                       return (
                         <button
                           key={slot}
                           type="button"
                           disabled={state === "disabled"}
-                          onClick={() => handleSlotClick(slot)}
+                          onClick={() =>
+                            setEditSlots(
+                              toggleSlot(slot, editSlots, timeSlots, maxHours),
+                            )
+                          }
                           className={cn(
                             "rounded-xl border px-2 py-2.5 text-sm font-medium transition-colors",
                             state === "selected" &&

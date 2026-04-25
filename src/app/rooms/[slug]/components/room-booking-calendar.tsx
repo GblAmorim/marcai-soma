@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { generateTimeSlots, parseHour, slotIndex } from "@/lib/slots";
+import { generateTimeSlots, getSlotState, parseHour, slotIndex, toggleSlot } from "@/lib/slots";
 import { cn } from "@/lib/utils";
 
 interface RoomBookingCalendarProps {
@@ -58,57 +58,6 @@ const RoomBookingCalendar = ({
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
     setSelectedSlots([]);
-  };
-
-  const isSlotDisabled = (slot: string): boolean => {
-    if (selectedSlots.length === 0) return false;
-
-    const idx = slotIndex(slot, timeSlots);
-    const selectedIndices = selectedSlots.map((s) => slotIndex(s, timeSlots));
-    const minIdx = Math.min(...selectedIndices);
-    const maxIdx = Math.max(...selectedIndices);
-
-    if (selectedSlots.includes(slot)) return false;
-
-    const wouldExtendLeft = idx === minIdx - 1;
-    const wouldExtendRight = idx === maxIdx + 1;
-
-    if (!wouldExtendLeft && !wouldExtendRight) return true;
-    if (selectedSlots.length >= maxHours) return true;
-
-    return false;
-  };
-
-  const handleSlotClick = (slot: string) => {
-    if (selectedSlots.includes(slot)) {
-      const idx = slotIndex(slot, timeSlots);
-      const selectedIndices = selectedSlots.map((s) => slotIndex(s, timeSlots));
-      const minIdx = Math.min(...selectedIndices);
-      const maxIdx = Math.max(...selectedIndices);
-
-      if (idx === minIdx || idx === maxIdx) {
-        setSelectedSlots((prev) => prev.filter((s) => s !== slot));
-      }
-      return;
-    }
-
-    if (isSlotDisabled(slot)) return;
-    setSelectedSlots((prev) => [...prev, slot].sort());
-  };
-
-  const getSlotState = (
-    slot: string,
-  ): "selected" | "edge" | "disabled" | "default" => {
-    if (selectedSlots.includes(slot)) {
-      const selectedIndices = selectedSlots.map((s) => slotIndex(s, timeSlots));
-      const minIdx = Math.min(...selectedIndices);
-      const maxIdx = Math.max(...selectedIndices);
-      const idx = slotIndex(slot, timeSlots);
-      if (idx === minIdx || idx === maxIdx) return "edge";
-      return "selected";
-    }
-    if (isSlotDisabled(slot)) return "disabled";
-    return "default";
   };
 
   const startTime = selectedSlots.length ? selectedSlots[0] : null;
@@ -191,13 +140,22 @@ const RoomBookingCalendar = ({
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {timeSlots.map((slot) => {
-                  const state = getSlotState(slot);
+                  const state = getSlotState(
+                    slot,
+                    selectedSlots,
+                    timeSlots,
+                    maxHours,
+                  );
                   return (
                     <button
                       key={slot}
                       type="button"
                       disabled={state === "disabled"}
-                      onClick={() => handleSlotClick(slot)}
+                      onClick={() =>
+                        setSelectedSlots(
+                          toggleSlot(slot, selectedSlots, timeSlots, maxHours),
+                        )
+                      }
                       className={cn(
                         "rounded-xl border px-2 py-2.5 text-sm font-medium transition-colors",
                         state === "selected" &&
