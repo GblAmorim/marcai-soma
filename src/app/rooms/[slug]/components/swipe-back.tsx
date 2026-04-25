@@ -5,14 +5,16 @@ import { useEffect } from "react";
 
 /**
  * Invisible component that detects a left-edge swipe (iOS-style)
- * and navigates to the rooms listing when triggered.
+ * and navigates back when triggered.
  *
  * Gesture rules:
  *  - Touch must start within the leftmost 20 px of the screen
  *  - Horizontal displacement must be > 80 px to the right
  *  - Horizontal displacement must be greater than vertical (no diagonal reject)
+ *
+ * @param href - destination URL. Defaults to router.back() if omitted.
  */
-const SwipeBack = () => {
+const SwipeBack = ({ href }: { href?: string } = {}) => {
   const router = useRouter();
 
   useEffect(() => {
@@ -38,7 +40,11 @@ const SwipeBack = () => {
       const dy = Math.abs(touch.clientY - startY);
       tracking = false;
       if (dx > 80 && dx > dy) {
-        router.push("/");
+        if (href) {
+          router.push(href);
+        } else {
+          router.back();
+        }
       }
     };
 
@@ -48,7 +54,7 @@ const SwipeBack = () => {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchend", onTouchEnd);
     };
-  }, [router]);
+  }, [router, href]);
 
   return null;
 };
